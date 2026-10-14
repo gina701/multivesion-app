@@ -121,9 +121,18 @@ app.get("/api/admin/dashboard",auth,(req,res)=>{
   const todays=sales.filter(s=>s.date.slice(0,10)===today), monthly=sales.filter(s=>s.date.slice(0,7)===month);
   const salesTotal=arr=>arr.reduce((a,s)=>a+moneyNumber(s.total),0);
   const expenseTotal=expenses.filter(e=>e.date.slice(0,7)===month).reduce((a,e)=>a+moneyNumber(e.amount),0);
+  const stockUnits=products.reduce((total,p)=>total+Math.max(0,moneyNumber(p.quantity)),0);
+  const stockCostValue=products.reduce((total,p)=>total+Math.max(0,moneyNumber(p.quantity))*moneyNumber(p.purchasePrice),0);
+  const stockRetailValue=products.reduce((total,p)=>total+Math.max(0,moneyNumber(p.quantity))*moneyNumber(p.price),0);
+  const inventoryAlerts=products
+    .filter(p=>moneyNumber(p.quantity)<=0 || moneyNumber(p.quantity)<=moneyNumber(p.lowStock))
+    .sort((a,b)=>moneyNumber(a.quantity)-moneyNumber(b.quantity))
+    .slice(0,8)
+    .map(p=>({id:p.id,name:p.name,quantity:moneyNumber(p.quantity),lowStock:moneyNumber(p.lowStock)}));
   res.json({
     todaySales:salesTotal(todays),monthlySales:salesTotal(monthly),totalSales:salesTotal(sales),
     expenses:expenseTotal,profit:monthly.reduce((a,s)=>a+moneyNumber(s.profit),0)-expenseTotal,
+    stockUnits,stockCostValue,stockRetailValue,inventoryAlerts,
     products:products.length,lowStock:products.filter(p=>p.quantity<=p.lowStock && p.quantity>0).length,
     outOfStock:products.filter(p=>p.quantity<=0).length,customers:read("customers").length,
     suppliers:read("suppliers").length,pendingLaybys:laybys.filter(l=>l.status!=="COMPLETED").length,

@@ -2,7 +2,7 @@
   "name": "Multivision Electronics Management",
   "short_name": "Multivision",
   "description": "Multivision Electronics & Investments shop management system",
-  "start_url": "/login.html",
+  "start_url": "/dashboard.html",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f4f6f8",
