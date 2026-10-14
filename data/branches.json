@@ -1,0 +1,20 @@
+[
+  {
+    "id": "br_mzuzu_st",
+    "name": "Mzuzu \u2014 St Augustine Market",
+    "address": "Opposite Mzuni in St Augustine Market",
+    "active": true
+  },
+  {
+    "id": "br_mzuzu_uni",
+    "name": "Mzuzu \u2014 Near Mzuzu University",
+    "address": "Just after Mzuzu University Main Gate, 30 metres ahead towards Kaka Motel, right-hand side after Cape Restaurant",
+    "active": true
+  },
+  {
+    "id": "br_zomba",
+    "name": "Zomba \u2014 An Juman Shopping Mall",
+    "address": "An Juman Shopping Mall",
+    "active": true
+  }
+]
