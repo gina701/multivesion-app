@@ -1,4 +1,5 @@
 const TOKEN_KEY="multivision_token";
+window.currentUser=null;
 function token(){return localStorage.getItem(TOKEN_KEY)}
 function headers(){return {"Authorization":"Bearer "+token(),"Content-Type":"application/json"}}
 async function api(path,opt={}){let o={...opt,headers:{...headers(),...(opt.headers||{})}};let r=await fetch(path,o);if(r.status===401){localStorage.removeItem(TOKEN_KEY);location="login.html";throw Error("Login required")}let d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Request failed");return d}
@@ -12,8 +13,10 @@ function shell(title){
     if(link.getAttribute("href")===currentPage){link.classList.add("active");link.setAttribute("aria-current","page")}
   });
   api("/api/admin/me").then(user=>{
+    window.currentUser=user;
     const who=document.getElementById("who");
     if(who)who.textContent=`${user.name} — ${user.role}`;
+    window.dispatchEvent(new CustomEvent("appuserloaded",{detail:user}));
   }).catch(error=>console.error("Could not load signed-in user details:",error));
 }
 function logout(){localStorage.removeItem(TOKEN_KEY);location="login.html"}

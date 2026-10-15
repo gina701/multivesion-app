@@ -14,7 +14,7 @@ function showInstallHelp(){
     dialog.id="install-help";
     dialog.className="install-help";
     dialog.setAttribute("aria-labelledby","install-help-title");
-    dialog.innerHTML=`<form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form><p class="eyebrow">INSTALL MULTIVISION</p><h2 id="install-help-title">Add the app to your phone</h2><p>In Chrome, open the menu <strong>⋮</strong> and choose <strong>Install app</strong> or <strong>Add to Home screen</strong>. The app needs an HTTPS connection.</p><button class="dialog-done" type="button">Got it</button>`;
+    dialog.innerHTML=`<form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form><p class="eyebrow">INSTALL MULTIVISION</p><h2 id="install-help-title">Install the app</h2><p>Use Chrome's <strong>Install app</strong> option to add Multivision to your device. The install prompt requires your confirmation; Chrome and Android control where its app icon appears. The site must be open over HTTPS.</p><button class="dialog-done" type="button">Got it</button>`;
     dialog.querySelector(".dialog-done").addEventListener("click",()=>dialog.close());
     dialog.addEventListener("click",event=>{if(event.target===dialog)dialog.close()});
     document.body.appendChild(dialog);

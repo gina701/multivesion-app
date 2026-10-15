@@ -124,6 +124,30 @@ app.get("/api/admin/dashboard",auth,(req,res)=>{
   const stockUnits=products.reduce((total,p)=>total+Math.max(0,moneyNumber(p.quantity)),0);
   const stockCostValue=products.reduce((total,p)=>total+Math.max(0,moneyNumber(p.quantity))*moneyNumber(p.purchasePrice),0);
   const stockRetailValue=products.reduce((total,p)=>total+Math.max(0,moneyNumber(p.quantity))*moneyNumber(p.price),0);
+  const activeSales=sales.filter(s=>!s.returned);
+  const todayDate=new Date(`${today}T00:00:00.000Z`);
+  const dateKey=offset=>{
+    const date=new Date(todayDate);
+    date.setUTCDate(date.getUTCDate()+offset);
+    return date.toISOString().slice(0,10);
+  };
+  const weekStart=dateKey(-6),previousWeekStart=dateKey(-13),previousWeekEnd=dateKey(-7);
+  const lastWeekSales=activeSales.filter(s=>s.date.slice(0,10)>=weekStart&&s.date.slice(0,10)<=today);
+  const previousWeekSales=activeSales.filter(s=>s.date.slice(0,10)>=previousWeekStart&&s.date.slice(0,10)<=previousWeekEnd);
+  const salesTrend=Array.from({length:7},(_,index)=>{
+    const date=dateKey(index-6);
+    return {date,total:salesTotal(lastWeekSales.filter(s=>s.date.slice(0,10)===date))};
+  });
+  const previousWeekTotal=salesTotal(previousWeekSales),lastWeekTotal=salesTotal(lastWeekSales);
+  const salesChangePercent=previousWeekTotal===0?null:Math.round((lastWeekTotal-previousWeekTotal)/previousWeekTotal*100);
+  const productSales=new Map();
+  for(const sale of activeSales){
+    const current=productSales.get(sale.productId)||{name:sale.productName,quantity:0,revenue:0};
+    current.quantity+=moneyNumber(sale.quantity);
+    current.revenue+=moneyNumber(sale.total);
+    productSales.set(sale.productId,current);
+  }
+  const topProducts=[...productSales.values()].sort((a,b)=>b.quantity-a.quantity).slice(0,5);
   const inventoryAlerts=products
     .filter(p=>moneyNumber(p.quantity)<=0 || moneyNumber(p.quantity)<=moneyNumber(p.lowStock))
     .sort((a,b)=>moneyNumber(a.quantity)-moneyNumber(b.quantity))
@@ -133,6 +157,8 @@ app.get("/api/admin/dashboard",auth,(req,res)=>{
     todaySales:salesTotal(todays),monthlySales:salesTotal(monthly),totalSales:salesTotal(sales),
     expenses:expenseTotal,profit:monthly.reduce((a,s)=>a+moneyNumber(s.profit),0)-expenseTotal,
     stockUnits,stockCostValue,stockRetailValue,inventoryAlerts,
+    salesTrend,lastWeekSales:lastWeekTotal,salesChangePercent,
+    averageSale:lastWeekSales.length?lastWeekTotal/lastWeekSales.length:0,topProducts,
     products:products.length,lowStock:products.filter(p=>p.quantity<=p.lowStock && p.quantity>0).length,
     outOfStock:products.filter(p=>p.quantity<=0).length,customers:read("customers").length,
     suppliers:read("suppliers").length,pendingLaybys:laybys.filter(l=>l.status!=="COMPLETED").length,
@@ -144,7 +170,7 @@ app.get("/api/admin/products",auth,(req,res)=>res.json(read("products")));
 app.post("/api/admin/products",auth,admin,(req,res)=>{
   const p=req.body||{};
   const products=read("products");
-  const product={id:id("prd"),name:p.name||"Unnamed product",category:p.category||"Other Electronics",description:p.description||"",specifications:p.specifications||{},price:moneyNumber(p.price),priceText:p.priceText||null,purchasePrice:moneyNumber(p.purchasePrice),quantity:moneyNumber(p.quantity),lowStock:moneyNumber(p.lowStock)||2,branchIds:p.branchIds||[],supplierId:p.supplierId||null,available:p.available!==false,publicVisible:p.publicVisible!==false,featured:!!p.featured,imageUrl:p.imageUrl||null,sku:p.sku||"",createdAt:now(),updatedAt:now()};
+  const product={id:id("prd"),name:p.name||"Unnamed product",category:p.category||"Other Electronics",description:p.description||"",specifications:p.specifications||{},price:moneyNumber(p.price),priceText:p.priceText||null,purchasePrice:moneyNumber(p.purchasePrice),quantity:moneyNumber(p.quantity),lowStock:moneyNumber(p.lowStock??2),branchIds:p.branchIds||[],supplierId:p.supplierId||null,available:p.available!==false,publicVisible:p.publicVisible!==false,featured:!!p.featured,imageUrl:p.imageUrl||null,sku:p.sku||"",createdAt:now(),updatedAt:now()};
   products.unshift(product);writeData("products",products);audit("PRODUCT_ADDED",req,{id:product.id,name:product.name});res.status(201).json(product);
 });
 app.put("/api/admin/products/:id",auth,admin,(req,res)=>{
@@ -190,9 +216,9 @@ app.get("/api/admin/profit-loss",auth,(req,res)=>{
 const storage=multer.diskStorage({destination:(req,file,cb)=>cb(null,UPLOADS),filename:(req,file,cb)=>{const ext=path.extname(file.originalname).toLowerCase();cb(null,Date.now()+"-"+Math.random().toString(36).slice(2)+ext);}});
 const upload=multer({storage,limits:{fileSize:5*1024*1024},fileFilter:(req,file,cb)=>{if(!/^image\/(jpeg|png|webp|gif)$/.test(file.mimetype))return cb(new Error("Only image files are allowed"));cb(null,true);}});
 app.post("/api/admin/products/:id/image",auth,admin,upload.single("image"),(req,res)=>{
-  if(!req.file)return res.status(400).json({error:"Image required"});
   const products=read("products"), i=products.findIndex(p=>p.id===req.params.id);
   if(i<0)return res.status(404).json({error:"Product not found"});
+  if(!req.file)return res.status(400).json({error:"Image required"});
   products[i].imageUrl=`/uploads/${req.file.filename}`;products[i].updatedAt=now();writeData("products",products);
   audit("PRODUCT_IMAGE_UPLOADED",req,{id:req.params.id});res.json({imageUrl:products[i].imageUrl,product:products[i]});
 });
